@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOXHAND - AI Smart Sign Language Glove Prototype</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              500: '#14b8a6',
+              600: '#0d9488',
+              900: '#134e4a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#0b0f19] text-gray-100 min-h-screen font-sans antialiased selection:bg-teal-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-gray-800/80 px-6 py-3.5 shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-teal-500/20">
+          <i data-lucide="hand" class="w-6 h-6 text-slate-950 font-bold"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-cyan-200 to-white">VOXHAND</span>
+            <span class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded-full">AI Prototype</span>
+          </div>
+          <p class="text-xs text-gray-400">ESP32 + 5-Flex + 6-DOF IMU Telemetry & TTS System</p>
+        </div>
+      </div>
+
+      <!-- Connection Status & Stream Controls -->
+      <div class="flex items-center space-x-3 flex-wrap">
+        
+        <!-- Stream Source Input -->
+        <div class="flex items-center bg-gray-900/90 border border-gray-700/80 rounded-lg px-2.5 py-1.5 text-xs">
+          <i data-lucide="network" class="w-3.5 h-3.5 text-gray-400 mr-2"></i>
+          <input id="wsUrlInput" type="text" value="" placeholder="ws://localhost:8000/ws/stream" 
+                 class="bg-transparent text-gray-200 focus:outline-none w-44 md:w-56 text-xs font-mono">
+          <button id="btnConnect" class="ml-2 px-2.5 py-0.5 bg-teal-600 hover:bg-teal-500 text-white rounded font-medium transition">
+            Connect
+          </button>
+        </div>
+
+        <!-- Connection Status Badge -->
+        <div id="connectionPill" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 transition-all">
+          <span id="connectionDot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+          <span id="connectionLabel">Disconnected</span>
+          <span id="fpsBadge" class="hidden ml-1 px-1.5 py-0.2 bg-black/40 rounded text-[10px] font-mono text-gray-300">0 FPS</span>
+        </div>
+
+        <!-- TTS Toggle Button -->
+        <button id="btnTtsToggle" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/15 border border-teal-500/40 text-teal-300 hover:bg-teal-500/25 transition">
+          <i id="ttsIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+          <span id="ttsLabel">TTS Active</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Top Hero: Translation & Speech Accessibility Display -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Live Translation Output Box (High Contrast & Accessibility) -->
+      <div id="translationCard" class="lg:col-span-2 glass-panel-accent rounded-2xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-300">
+        
+        <!-- Background subtle glow -->
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div>
+          <!-- Header with status badge & sound visualizer -->
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-6">
+            <div class="flex items-center space-x-2.5">
+              <span class="text-xs uppercase tracking-wider font-semibold text-gray-400">Live Gesture Translation</span>
+              <div id="speechWaveform" class="hidden items-center space-x-1 ml-2">
+                <span class="soundwave-bar w-1 bg-teal-400 rounded-full"></span>
+                <span class="soundwave-bar w-1 bg-teal-400 rounded-full"></span>
+                <span class="soundwave-bar w-1 bg-teal-400 rounded-full"></span>
+                <span class="soundwave-bar w-1 bg-teal-400 rounded-full"></span>
+                <span class="soundwave-bar w-1 bg-teal-400 rounded-full"></span>
+              </div>
+            </div>
+            
+            <div id="statusBadge" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-800 text-gray-400 border border-gray-700">
+              <i id="statusIcon" data-lucide="clock" class="w-3.5 h-3.5"></i>
+              <span id="statusText">WAITING FOR SENSOR DATA</span>
+            </div>
+          </div>
+
+          <!-- Main Speech / Recognized Text Display -->
+          <div class="py-4 min-h-[140px] flex items-center">
+            <h1 id="translatedOutput" class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight text-white transition-all duration-150">
+              --
+            </h1>
+          </div>
+        </div>
+
+        <!-- Footer Notice / Repeat Gesture Nudge -->
+        <div id="nudgeAlert" class="hidden mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm flex items-center space-x-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 text-amber-400"></i>
+          <span id="nudgeText" class="font-medium">Unrecognized gesture - please repeat gesture clearly.</span>
+        </div>
+
+        <!-- History ticker / Last Spoken time -->
+        <div class="mt-4 pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="history" class="w-3.5 h-3.5 text-gray-500"></i>
+            <span>Last Confirmed Sign: <strong id="lastConfirmedSign" class="text-teal-400 font-mono">None</strong></span>
+          </div>
+          <span id="lastUpdatedTimer">Awaiting frames</span>
+        </div>
+
+      </div>
+
+      <!-- Confidence Gauge & Decision Meter -->
+      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+            <span class="text-xs uppercase tracking-wider font-semibold text-gray-400">Inference Confidence</span>
+            <span class="text-[11px] font-mono text-gray-400">Threshold: <strong class="text-teal-400">70.0%</strong></span>
+          </div>
+
+          <!-- Circular / Radial Confidence Meter -->
+          <div class="flex flex-col items-center justify-center my-4">
+            <div class="relative w-36 h-36 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" class="text-gray-800" fill="transparent" />
+                <circle id="confidenceRing" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="8" 
+                        stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"
+                        class="text-teal-400 transition-all duration-300" fill="transparent" />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="confidencePercentage" class="text-3xl font-black font-mono tracking-tight text-white">0%</span>
+                <span id="confidenceSubtext" class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Score</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linear progress bar bar for quick reference -->
+          <div class="space-y-1 mt-2">
+            <div class="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+              <div id="confidenceBar" class="bg-teal-500 h-2.5 rounded-full transition-all duration-200" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>0% (Reject)</span>
+              <span class="text-teal-500 font-bold">70% (Accept)</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Class Probabilities Breakdown -->
+          <div class="mt-5 space-y-2">
+            <span class="text-[11px] uppercase font-bold tracking-wider text-gray-400 block mb-1">Class Probabilities</span>
+            <div id="probabilitiesList" class="space-y-1.5 text-xs font-mono">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Middle Section: Live Hand Telemetry & IMU Gauges -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- 5-Finger Biomechanical Hand Visualizer (SVG) -->
+      <div class="lg:col-span-7 glass-panel rounded-2xl p-6">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="hand" class="w-4 h-4 text-teal-400"></i>
+            <span class="text-xs uppercase tracking-wider font-semibold text-gray-300">Biomechanical Hand Visualizer</span>
+          </div>
+          <span class="text-[11px] text-gray-400">ADC 12-bit &rarr; Normalized [0.0 - 1.0]</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          
+          <!-- Dynamic SVG Hand Diagram -->
+          <div class="flex justify-center items-center py-2 relative">
+            <svg id="handSvg" class="w-56 h-64 drop-shadow-2xl" viewBox="0 0 240 280">
+              <!-- Palm Outline -->
+              <path d="M 60,160 C 50,220 70,250 120,255 C 170,250 190,220 180,160 Z" 
+                    fill="#1f2937" stroke="#374151" stroke-width="3" />
+              
+              <!-- Thumb -->
+              <g id="svgThumb" class="hand-bone">
+                <line x1="65" y1="165" x2="35" y2="135" stroke="#0d9488" stroke-width="14" stroke-linecap="round" />
+                <circle cx="35" cy="135" r="7" fill="#14b8a6" />
+                <text x="15" y="138" font-size="10" fill="#9ca3af" font-weight="bold">TH</text>
+              </g>
+
+              <!-- Index -->
+              <g id="svgIndex" class="hand-bone">
+                <line x1="85" y1="160" x2="85" y2="65" stroke="#0d9488" stroke-width="14" stroke-linecap="round" />
+                <circle cx="85" cy="65" r="7" fill="#14b8a6" />
+                <text x="80" y="52" font-size="10" fill="#9ca3af" font-weight="bold">IN</text>
+              </g>
+
+              <!-- Middle -->
+              <g id="svgMiddle" class="hand-bone">
+                <line x1="120" y1="158" x2="120" y2="45" stroke="#0d9488" stroke-width="14" stroke-linecap="round" />
+                <circle cx="120" cy="45" r="7" fill="#14b8a6" />
+                <text x="114" y="32" font-size="10" fill="#9ca3af" font-weight="bold">MID</text>
+              </g>
+
+              <!-- Ring -->
+              <g id="svgRing" class="hand-bone">
+                <line x1="155" y1="160" x2="155" y2="65" stroke="#0d9488" stroke-width="14" stroke-linecap="round" />
+                <circle cx="155" cy="65" r="7" fill="#14b8a6" />
+                <text x="150" y="52" font-size="10" fill="#9ca3af" font-weight="bold">RG</text>
+              </g>
+
+              <!-- Pinky -->
+              <g id="svgPinky" class="hand-bone">
+                <line x1="180" y1="168" x2="195" y2="90" stroke="#0d9488" stroke-width="12" stroke-linecap="round" />
+                <circle cx="195" cy="90" r="6" fill="#14b8a6" />
+                <text x="195" y="78" font-size="10" fill="#9ca3af" font-weight="bold">PK</text>
+              </g>
+
+              <!-- Central Palm Sensor Node -->
+              <circle cx="120" cy="195" r="16" fill="#0f172a" stroke="#14b8a6" stroke-width="2" />
+              <text x="107" y="199" font-size="9" fill="#14b8a6" font-family="monospace">MPU</text>
+            </svg>
+          </div>
+
+          <!-- 5 Finger Flexion Sliders/Bars -->
+          <div class="space-y-3.5 pr-2">
+            
+            <!-- Thumb -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-300 font-medium">1. Thumb (GPIO 36)</span>
+                <span id="valFlex0" class="font-mono text-teal-400 font-bold">0.00 (0%)</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-2">
+                <div id="barFlex0" class="bg-teal-500 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Index -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-300 font-medium">2. Index (GPIO 39)</span>
+                <span id="valFlex1" class="font-mono text-teal-400 font-bold">0.00 (0%)</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-2">
+                <div id="barFlex1" class="bg-teal-500 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Middle -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-300 font-medium">3. Middle (GPIO 34)</span>
+                <span id="valFlex2" class="font-mono text-teal-400 font-bold">0.00 (0%)</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-2">
+                <div id="barFlex2" class="bg-teal-500 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Ring -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-300 font-medium">4. Ring (GPIO 35)</span>
+                <span id="valFlex3" class="font-mono text-teal-400 font-bold">0.00 (0%)</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-2">
+                <div id="barFlex3" class="bg-teal-500 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Pinky -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-300 font-medium">5. Pinky (GPIO 32)</span>
+                <span id="valFlex4" class="font-mono text-teal-400 font-bold">0.00 (0%)</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-2">
+                <div id="barFlex4" class="bg-teal-500 h-2 rounded-full transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 6-DOF IMU (Accelerometer & Gyroscope) Indicator -->
+      <div class="lg:col-span-5 glass-panel rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="compass" class="w-4 h-4 text-cyan-400"></i>
+              <span class="text-xs uppercase tracking-wider font-semibold text-gray-300">6-DOF IMU Attitude & Motion</span>
+            </div>
+            <span class="text-[11px] font-mono text-gray-400">MPU6050 (0x68)</span>
+          </div>
+
+          <!-- Artificial Horizon / Pitch & Roll Tilt Plate -->
+          <div class="flex flex-col items-center justify-center my-3">
+            <div class="w-36 h-36 rounded-full bg-gray-900 border-2 border-gray-700 relative overflow-hidden flex items-center justify-center shadow-inner">
+              <!-- Horizon ground half -->
+              <div id="horizonPlate" class="absolute inset-0 bg-gradient-to-b from-teal-900/40 via-cyan-900/60 to-gray-950 transition-transform duration-100"
+                   style="transform: rotate(0deg) translateY(0px)">
+                <!-- Center line -->
+                <div class="w-full h-0.5 bg-cyan-400/70 absolute top-1/2 -translate-y-1/2"></div>
+              </div>
+              <!-- Crosshair -->
+              <div class="w-6 h-0.5 bg-amber-400 absolute"></div>
+              <div class="h-6 w-0.5 bg-amber-400 absolute"></div>
+              <div class="w-2.5 h-2.5 rounded-full border-2 border-amber-400 absolute"></div>
+            </div>
+            <div class="flex space-x-6 mt-2 text-xs font-mono">
+              <span>Pitch: <strong id="valPitch" class="text-cyan-400">0.0°</strong></span>
+              <span>Roll: <strong id="valRoll" class="text-cyan-400">0.0°</strong></span>
+            </div>
+          </div>
+
+          <!-- Accelerometer 3-Axis (g) -->
+          <div class="mt-4">
+            <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block mb-1.5">Accelerometer (±2g)</span>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">AX</span>
+                <span id="valAx" class="text-white font-bold">0.00g</span>
+              </div>
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">AY</span>
+                <span id="valAy" class="text-white font-bold">0.00g</span>
+              </div>
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">AZ</span>
+                <span id="valAz" class="text-white font-bold">0.00g</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gyroscope 3-Axis (rad/s) -->
+          <div class="mt-3">
+            <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block mb-1.5">Gyroscope (rad/s)</span>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">GX</span>
+                <span id="valGx" class="text-cyan-300 font-bold">0.00</span>
+              </div>
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">GY</span>
+                <span id="valGy" class="text-cyan-300 font-bold">0.00</span>
+              </div>
+              <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+                <span class="text-gray-500 block text-[10px]">GZ</span>
+                <span id="valGz" class="text-cyan-300 font-bold">0.00</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Bottom Section: Mock Hardware Simulator Lab & Translation History -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Interactive Mock Simulator Controls -->
+      <div class="lg:col-span-8 glass-panel rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between border-b border-gray-800 pb-3 mb-4 gap-2">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
+            <span class="text-xs uppercase tracking-wider font-semibold text-gray-300">Mock Hardware Simulator & Gesture Trigger</span>
+          </div>
+          <!-- Auto Cycle Toggle Button -->
+          <button id="btnAutoDemo" class="px-3 py-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 rounded-lg text-xs font-medium transition flex items-center space-x-1.5">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span id="autoDemoLabel">Start Auto-Cycle Demo</span>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-400 mb-4">
+          Click any gesture below to immediately transmit simulated hardware packets into the ML classifier and trigger TTS speech:
+        </p>
+
+        <!-- Gesture Trigger Buttons -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 mb-6">
+          <button data-sim="HELLO" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-teal-600/20 border border-gray-700 hover:border-teal-500 text-xs font-bold text-gray-200 transition text-center shadow">
+            👋 HELLO
+          </button>
+          <button data-sim="THANK YOU" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-teal-600/20 border border-gray-700 hover:border-teal-500 text-xs font-bold text-gray-200 transition text-center shadow">
+            🙏 THANK YOU
+          </button>
+          <button data-sim="HELP" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-teal-600/20 border border-gray-700 hover:border-teal-500 text-xs font-bold text-gray-200 transition text-center shadow">
+            👍 HELP
+          </button>
+          <button data-sim="YES" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-teal-600/20 border border-gray-700 hover:border-teal-500 text-xs font-bold text-gray-200 transition text-center shadow">
+            ✊ YES
+          </button>
+          <button data-sim="NO" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-teal-600/20 border border-gray-700 hover:border-teal-500 text-xs font-bold text-gray-200 transition text-center shadow">
+            👌 NO
+          </button>
+          <button data-sim="REST_OR_NOISE" class="btn-gesture px-3 py-3 rounded-xl bg-gray-900 hover:bg-amber-600/20 border border-gray-700 hover:border-amber-500 text-xs font-bold text-amber-300 transition text-center shadow">
+            ⚠️ NOISE / IDLE
+          </button>
+        </div>
+
+        <!-- Manual Parameter Tuning Sliders for Edge-Case Testing -->
+        <details class="group border border-gray-800 rounded-xl p-4 bg-gray-900/40">
+          <summary class="text-xs font-semibold uppercase tracking-wider text-gray-400 cursor-pointer flex items-center justify-between">
+            <span>Manual Sensor Overrides (Click to expand)</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i>
+          </summary>
+          
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-2">
+              <label class="flex justify-between text-gray-400">
+                <span>Manual Flex - All Fingers:</span>
+                <span id="sliderFlexVal">0.10</span>
+              </label>
+              <input id="sliderManualFlex" type="range" min="0.0" max="1.0" step="0.02" value="0.10" class="w-full accent-teal-500">
+            </div>
+
+            <div class="space-y-2">
+              <label class="flex justify-between text-gray-400">
+                <span>Manual Accel Y (Tilt):</span>
+                <span id="sliderAccelVal">0.95g</span>
+              </label>
+              <input id="sliderManualAccel" type="range" min="-1.5" max="1.5" step="0.05" value="0.95" class="w-full accent-cyan-500">
+            </div>
+
+            <div class="col-span-1 md:col-span-2 flex justify-end">
+              <button id="btnEmitManual" class="px-4 py-1.5 bg-gray-800 hover:bg-teal-600 text-white rounded-lg text-xs font-medium transition">
+                Send Manual Frame
+              </button>
+            </div>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- Translation History Log -->
+      <div class="lg:col-span-4 glass-panel rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="message-square" class="w-4 h-4 text-teal-400"></i>
+              <span class="text-xs uppercase tracking-wider font-semibold text-gray-300">Speech & Event Log</span>
+            </div>
+            <button id="btnClearHistory" class="text-[10px] text-gray-500 hover:text-gray-300">Clear</button>
+          </div>
+
+          <div id="historyContainer" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs">
+            <p class="text-gray-600 italic text-center py-6">No speech events logged yet.</p>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-gray-800 text-[11px] text-gray-400 flex items-center justify-between">
+          <span>Web Speech API (vocalization)</span>
+          <span class="text-teal-400 font-mono">EN-US Voice</span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Notification Audio elements synthesized via Web Audio API -->
+
+  <script src="app.js"></script>
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>
+

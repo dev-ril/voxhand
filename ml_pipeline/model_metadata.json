@@ -1,0 +1,42 @@
+{
+  "feature_names": [
+    "flex_thumb",
+    "flex_index",
+    "flex_middle",
+    "flex_ring",
+    "flex_pinky",
+    "accel_x",
+    "accel_y",
+    "accel_z",
+    "gyro_x",
+    "gyro_y",
+    "gyro_z"
+  ],
+  "classes": [
+    "HELLO",
+    "HELP",
+    "NO",
+    "REST_OR_NOISE",
+    "THANK YOU",
+    "YES"
+  ],
+  "target_classes": [
+    "HELLO",
+    "THANK YOU",
+    "HELP",
+    "YES",
+    "NO",
+    "REST_OR_NOISE"
+  ],
+  "gesture_descriptions": {
+    "HELLO": "Open hand, palm facing forward, gentle side-to-side waving motion.",
+    "THANK YOU": "Flat hand moves forward from chin toward recipient; palm tilted slightly forward.",
+    "HELP": "Fist with thumb upright (thumbs up pose placed firmly on base hand).",
+    "YES": "Closed fist nodding up and down repeatedly like a head nod.",
+    "NO": "Index and middle fingers snap down to touch thumb; ring and pinky tucked.",
+    "REST_OR_NOISE": "Idle hand resting or indeterminate transitioning movement."
+  },
+  "test_accuracy": 1.0,
+  "confidence_threshold": 0.7,
+  "rejection_message": "Unrecognized gesture - please repeat gesture clearly."
+}
