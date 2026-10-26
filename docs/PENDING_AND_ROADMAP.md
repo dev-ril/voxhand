@@ -53,3 +53,4 @@ While the digital prototype, backend, machine learning pipeline, and simulation 
 | **Audio Output** | Web Speech API (Client Browser) | Web Speech API + Onboard I2S Speaker |
 | **Hardware Form Factor**| ESP32 DevKit + Breadboard / Mock | Custom Wrist Enclosure + LiPo Battery |
 | **Operating Mode** | Real-Time Telemetry Streaming | Autonomous Edge Device + Web Companion |
+

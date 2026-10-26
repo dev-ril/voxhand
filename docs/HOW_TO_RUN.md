@@ -134,3 +134,4 @@ uvicorn backend.app:app --port 8080
 ### WebSocket Disconnected
 - Verify that the backend gateway is running in your terminal.
 - Check that the URL in the dashboard matches `ws://localhost:8000/ws/stream`.
+

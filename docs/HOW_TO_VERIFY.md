@@ -139,3 +139,4 @@ curl -X POST http://localhost:8000/api/simulate \
   -H "Content-Type: application/json" \
   -d "{\"gesture\": \"HELP\"}"
 ```
+

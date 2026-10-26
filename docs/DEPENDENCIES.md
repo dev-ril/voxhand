@@ -103,3 +103,4 @@ If you are assembling and flashing the physical glove hardware:
 | **Glove Substrate**| 1 | Fitted cycling, athletic, or compression glove |
 | **Wiring** | 1 set | 28-30 AWG flexible silicone stranded wire |
 | **Power** | 1 | 3.7V LiPo Battery + 5V Step-up OR Micro-USB cable |
+
