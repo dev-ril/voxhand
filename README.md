@@ -46,10 +46,26 @@ flowchart LR
 
 ---
 
+## 📚 Dedicated Documentation Guides
+
+| Guide | Description |
+| :--- | :--- |
+| [🚀 **docs/HOW_TO_RUN.md**](docs/HOW_TO_RUN.md) | Step-by-step instructions for 1-click execution, multi-terminal mode, and physical ESP32 setup. |
+| [🧪 **docs/HOW_TO_VERIFY.md**](docs/HOW_TO_VERIFY.md) | Automated unit testing, live runtime verification script, and manual dashboard test checklist. |
+| [📦 **docs/DEPENDENCIES.md**](docs/DEPENDENCIES.md) | Complete software inventory: Python packages, browser compatibility, and ESP32 Arduino libraries. |
+| [🗺️ **docs/PENDING_AND_ROADMAP.md**](docs/PENDING_AND_ROADMAP.md) | Current implementation status, pending physical items, and future production roadmap. |
+
+---
+
 ## 📂 Monorepo Structure
 
 ```text
 voxhand/
+├── docs/
+│   ├── HOW_TO_RUN.md             # Detailed execution guide (1-command, modular, hardware)
+│   ├── HOW_TO_VERIFY.md          # Complete verification methodology & test checklist
+│   ├── DEPENDENCIES.md           # Python packages, browser APIs, and hardware BOM
+│   └── PENDING_AND_ROADMAP.md    # Completed features vs. pending roadmap items
 ├── firmware/
 │   ├── voxhand_firmware.ino      # ESP32 C++ Arduino sketch (ADC + I2C + WebSockets)
 │   ├── mock_esp32_streamer.py    # Fallback synthetic hardware streamer (port 8080 & pusher)
@@ -70,7 +86,8 @@ voxhand/
 │   └── styles.css                # Glowing indicators, soundwave animations, cybernetic styles
 ├── tests/
 │   ├── __init__.py
-│   └── test_pipeline.py          # Complete unit test suite (ML, routes, streamer schema)
+│   ├── test_pipeline.py          # Complete unit test suite (ML, routes, streamer schema)
+│   └── verify_local_run.py       # Live end-to-end integration check
 ├── run_demo.py                   # One-command runner for instant testing
 └── README.md                     # Top-level documentation
 ```
